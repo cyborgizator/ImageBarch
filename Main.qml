@@ -10,8 +10,17 @@ ApplicationWindow {
     visible: true
     title: qsTr("Image Barch")
 
+    HorizontalHeaderView {
+        id: horizontalHeader
+        syncView: tableView
+        anchors.left: tableView.left
+    }
+
     ScrollView {
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.top: horizontalHeader.bottom
 
         TableView {
             id: tableView
