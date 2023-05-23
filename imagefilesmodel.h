@@ -16,6 +16,7 @@ public:
     int columnCount(const QModelIndex & = QModelIndex()) const override { return 4; }
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
 private:

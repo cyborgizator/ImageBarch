@@ -47,10 +47,28 @@ QVariant ImageFilesModel::data(const QModelIndex &index, int role) const
                     result = QString("Decoding: %1%").arg(fileItem.progress);
                 }
                 break;
-            default:
-                return QVariant();
             }
         }
+    }
+
+    return result;
+}
+
+QVariant ImageFilesModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    Q_UNUSED(orientation);
+    QVariant result = QString();
+
+    if (role == Qt::DisplayRole && section >= 0 && section < columnCount())
+    {
+        static const QMap<Column, QString> headers {
+            {Column::Name, "File Name"},
+            {Column::Type, "Type"},
+            {Column::Size, "Size"},
+            {Column::Status, "Status"}
+        };
+
+        result = headers[static_cast<Column>(section)];
     }
 
     return result;
