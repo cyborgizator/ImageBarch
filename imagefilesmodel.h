@@ -18,6 +18,15 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
+    QString getDirectoryPath() const { return m_directoryPath; }
+    void setDirectoryPath(QString path);
+
+    Q_INVOKABLE void processFile(int fileIndex);
+
+    Q_PROPERTY(QString directoryPath READ getDirectoryPath WRITE setDirectoryPath NOTIFY directoryPathChanged)
+
+signals:
+    void directoryPathChanged();
 
 private:
     enum class Column : int
@@ -31,18 +40,29 @@ private:
     enum class Status: int
     {
         Normal,
-        Encoding,
-        Decoding
+        Packing,
+        Unpacking,
+    };
+
+    enum class Type: int
+    {
+        Unknown,
+        BMP,
+        PNG,
+        Packed
     };
 
     struct FileItem
     {
         FileItem(const QFileInfo& fileInfo) : info(fileInfo) {}
         QFileInfo info;
+        Type type = Type::Unknown;
         Status status = Status::Normal;
         int progress = 0;
     };
 
+    void PackImage(FileItem& sourceFile);
+    void UnpackImage(FileItem& sourceFile);
     void RefreshModel();
 
     QString m_directoryPath;

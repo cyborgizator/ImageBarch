@@ -1,4 +1,5 @@
 #include <QtCore/QDir>
+#include <QtGui/QImage>
 
 #include "imagefilesmodel.h"
 
@@ -7,7 +8,7 @@ ImageFilesModel::ImageFilesModel(const QString &dirPath, QObject *parent)
     : QAbstractTableModel(parent)
     , m_directoryPath(dirPath)      // Current working directory by default
 {
-    RefreshModel();
+//    RefreshModel();
 }
 
 int ImageFilesModel::rowCount(const QModelIndex &parent) const
@@ -32,19 +33,30 @@ QVariant ImageFilesModel::data(const QModelIndex &index, int role) const
                 result = fileItem.info.fileName();
                 break;
             case Column::Type:
-                result = fileItem.info.suffix();
+                if (fileItem.type == Type::BMP)
+                {
+                    result = "BMP";
+                }
+                else if (fileItem.type == Type::PNG)
+                {
+                    result = "PNG";
+                }
+                else if (fileItem.type == Type::Packed)
+                {
+                    result = "Packed";
+                }
                 break;
             case Column::Size:
                 result = fileItem.info.size();
                 break;
             case Column::Status:
-                if (fileItem.status == Status::Encoding)
+                if (fileItem.status == Status::Packing)
                 {
-                    result = QString("Encoding: %1%").arg(fileItem.progress);
+                    result = QString("Packing: %1%").arg(fileItem.progress);
                 }
-                else if (fileItem.status == Status::Decoding)
+                else if (fileItem.status == Status::Unpacking)
                 {
-                    result = QString("Decoding: %1%").arg(fileItem.progress);
+                    result = QString("Unpacking: %1%").arg(fileItem.progress);
                 }
                 break;
             }
@@ -79,6 +91,56 @@ QHash<int, QByteArray> ImageFilesModel::roleNames() const
     return {{Qt::DisplayRole, "display"}};
 }
 
+void ImageFilesModel::setDirectoryPath(QString path)
+{
+    if (m_directoryPath != path)
+    {
+        m_directoryPath = path;
+        RefreshModel();
+        emit directoryPathChanged();
+    }
+}
+
+void ImageFilesModel::processFile(int fileIndex)
+{
+    if (fileIndex >= 0 && fileIndex < m_fileItems.size())
+    {
+        FileItem& fileItem = m_fileItems[fileIndex];
+        if (fileItem.status == Status::Normal)
+        {
+            if (fileItem.type == Type::BMP || fileItem.type == Type::PNG)
+            {
+                PackImage(fileItem);
+            }
+            else if (fileItem.type == Type::Packed)
+            {
+                UnpackImage(fileItem);
+            }
+        }
+    }
+}
+
+void ImageFilesModel::PackImage(FileItem &sourceFile)
+{
+    QImage sourceImage(sourceFile.info.absoluteFilePath());
+    static const QList<QImage::Format> supported { QImage::Format_Grayscale8,
+                                                   QImage::Format_Indexed8 };
+
+    // TODO: show warning for unsupported format
+    if (!sourceImage.isNull() && supported.contains(sourceImage.format()))
+    {
+        sourceFile.status = Status::Packing;
+        sourceFile.progress = 0;
+
+        // TODO: create thread and call library function to pack image
+    }
+}
+
+void ImageFilesModel::UnpackImage(FileItem &sourceFile)
+{
+    // TODO: create thread and call library function to unpack image
+}
+
 void ImageFilesModel::RefreshModel()
 {
     beginResetModel();
@@ -86,12 +148,25 @@ void ImageFilesModel::RefreshModel()
 
     QDir directory(m_directoryPath);
     QStringList nameFilters;
-    nameFilters << "*.*"; // << "*.bmp" << "*.barch";
+    nameFilters << "*.bmp" << "*.png" << "*.barch";
     QFileInfoList fileInfoList = directory.entryInfoList(nameFilters, QDir::Files);
 
     for (const QFileInfo &fileInfo : fileInfoList)
     {
-        m_fileItems.append(FileItem(fileInfo));
+        FileItem fileItem(fileInfo);
+        if (fileInfo.suffix().toLower() == "bmp")
+        {
+            fileItem.type = Type::BMP;
+        }
+        else if (fileInfo.suffix().toLower() == "png")
+        {
+            fileItem.type = Type::PNG;
+        }
+        else if (fileInfo.suffix().toLower() == "barch")
+        {
+            fileItem.type = Type::Packed;
+        }
+        m_fileItems.append(fileItem);
     }
 
     endResetModel();

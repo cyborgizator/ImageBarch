@@ -13,7 +13,8 @@ ApplicationWindow {
     HorizontalHeaderView {
         id: horizontalHeader
         syncView: tableView
-        anchors.left: tableView.left
+        x: 2
+        y: 1
     }
 
     ScrollView {
@@ -33,11 +34,14 @@ ApplicationWindow {
             interactive: true
             rowSpacing: 1
             columnSpacing: 1
-            model: ImageFilesModel {}
+            model: ImageFilesModel {
+                directoryPath: ImagesDirectory
+            }
             selectionBehavior: TableView.SelectRows
             selectionModel: ItemSelectionModel {}
 
             delegate: Rectangle {
+                id: itemDelegate
                 required property bool current
                 implicitHeight: 22
 
@@ -50,6 +54,20 @@ ApplicationWindow {
                 Text {
                     text: model.display
                     padding: 1
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    propagateComposedEvents: true
+
+                    onPressed: {
+                        tableView.selectionModel.setCurrentIndex(tableView.model.index(row, 0),
+                                                                 ItemSelectionModel.ClearAndSelect)
+                    }
+
+                    onDoubleClicked: {
+                        tableView.model.processFile(row);
+                    }
                 }
             }
         }
