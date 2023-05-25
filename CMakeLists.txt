@@ -19,6 +19,8 @@ set(SOURCE_FILES
     # Add more source files here
 )
 
+include_directories(../Common/barchlib/include)
+
 qt_add_executable(appImageBarch ${CMAKE_PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
 
 qt_add_qml_module(appImageBarch
@@ -27,6 +29,9 @@ qt_add_qml_module(appImageBarch
     QML_FILES Main.qml
 )
 
+add_library(BarchLib STATIC IMPORTED)
+set_target_properties(BarchLib PROPERTIES IMPORTED_LOCATION ../Common/barchlib/bin/BarchLib.lib)
+
 set_target_properties(appImageBarch PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
@@ -34,6 +39,8 @@ set_target_properties(appImageBarch PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+target_link_libraries(appImageBarch PRIVATE BarchLib)
 
 target_link_libraries(appImageBarch
     PRIVATE Qt6::Quick

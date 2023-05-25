@@ -1,7 +1,9 @@
 #include <QtCore/QDir>
 #include <QtGui/QImage>
+#include <QThread>
 
 #include "imagefilesmodel.h"
+#include "barchlib.h"
 
 
 ImageFilesModel::ImageFilesModel(const QString &dirPath, QObject *parent)
@@ -122,22 +124,41 @@ void ImageFilesModel::processFile(int fileIndex)
 
 void ImageFilesModel::PackImage(FileItem &sourceFile)
 {
-    QImage sourceImage(sourceFile.info.absoluteFilePath());
+    QImage* sourceImage = new QImage(sourceFile.info.absoluteFilePath());
     static const QList<QImage::Format> supported { QImage::Format_Grayscale8,
                                                    QImage::Format_Indexed8 };
 
     // TODO: show warning for unsupported format
-    if (!sourceImage.isNull() && supported.contains(sourceImage.format()))
+    if (sourceImage != nullptr &&
+        !sourceImage->isNull() &&
+        supported.contains(sourceImage->format()))
     {
         sourceFile.status = Status::Packing;
         sourceFile.progress = 0;
 
+        RawImageData srcData;
+        srcData.width = sourceImage->width();
+        srcData.height = sourceImage->height();
+        srcData.data = sourceImage->bits();
+
+        ImagePacker packer(srcData);
+
         // TODO: create thread and call library function to pack image
+        ImagePacker::Result result = packer.Pack();
+
+        if (result == ImagePacker::Result::OK)
+        {
+            // TODO: save dstData to the file
+            packer.SaveToFile();
+        }
+
+        delete sourceImage;
     }
 }
 
 void ImageFilesModel::UnpackImage(FileItem &sourceFile)
 {
+    // TODO: load and parse source file
     // TODO: create thread and call library function to unpack image
 }
 
