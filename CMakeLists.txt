@@ -26,7 +26,7 @@ qt_add_executable(appImageBarch ${CMAKE_PROJECT_NAME} ${HEADER_FILES} ${SOURCE_F
 qt_add_qml_module(appImageBarch
     URI ImageBarch
     VERSION 1.0
-    QML_FILES Main.qml
+    QML_FILES Main.qml MessageBox.qml
 )
 
 add_library(BarchLib STATIC IMPORTED)

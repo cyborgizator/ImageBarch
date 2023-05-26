@@ -72,4 +72,14 @@ ApplicationWindow {
             }
         }
     }
+
+    function displayErrorMessage(message) {
+        Qt.dialogsCritical(message, Qt.resolvedUrl("qrc:/YourMessageBox.qml"))
+    }
+
+    Connections {
+        target: ImageFilesModel
+        onErrorMessage: displayErrorMessage(message)
+    }
 }
+

@@ -1,6 +1,7 @@
 #include <QtCore/QDir>
 #include <QtGui/QImage>
 #include <QThread>
+#include <QDir>
 
 #include "imagefilesmodel.h"
 #include "barchlib.h"
@@ -148,8 +149,13 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
 
         if (result == ImagePacker::Result::OK)
         {
-            // TODO: save dstData to the file
-            packer.SaveToFile();
+            QDir dir(m_directoryPath);
+            QString fileName = sourceFile.info.baseName() + "_packed.barch";
+            QString absoluteFilePath = dir.absoluteFilePath(fileName);
+            if (packer.SaveToFile(absoluteFilePath.toStdString()) != ImagePacker::Result::OK)
+            {
+                // TODO: show error message
+            }
         }
 
         delete sourceImage;
