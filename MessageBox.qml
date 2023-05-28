@@ -1,29 +1,14 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Fusion
+import QtQuick.Dialogs
 
-Item {
-    property string message: ""
+MessageDialog {
+    id: messageBox
+    title: "Error"
+    text: "The document has been modified."
+    flags: Qt.WindowStaysOnTopHint
+    modality: Qt.WindowModal
+    buttons: MessageDialog.Ok
 
-    Rectangle {
-        width: 300
-        height: 150
-        color: "lightgray"
-
-        Text {
-            anchors.centerIn: parent
-            text: message
-            font.pixelSize: 16
-        }
-
-        Button {
-            anchors.bottom: parent.bottom
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "OK"
-            onClicked: {
-                messageDismissedSignal()
-            }
-        }
-    }
-
-    signal messageDismissedSignal()
+    onAccepted: close()
 }

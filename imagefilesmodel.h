@@ -27,6 +27,7 @@ public:
 
 signals:
     void directoryPathChanged();
+    void errorMessage(QString message);
 
 private:
     enum class Column : int

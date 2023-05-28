@@ -1,14 +1,20 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Fusion
 import QtQuick.Window
 
 import my.customcomponents 1.0
 
+
 ApplicationWindow {
+    id: mainAppWindow
     width: 480
     height: 480
     visible: true
     title: qsTr("Image Barch")
+
+    Loader {
+        id: messageBoxLoader
+    }
 
     HorizontalHeaderView {
         id: horizontalHeader
@@ -35,10 +41,22 @@ ApplicationWindow {
             rowSpacing: 1
             columnSpacing: 1
             model: ImageFilesModel {
+                id: imageFilesModel
                 directoryPath: ImagesDirectory
             }
             selectionBehavior: TableView.SelectRows
             selectionModel: ItemSelectionModel {}
+
+            Connections {
+                target: imageFilesModel
+                function onErrorMessage(message) {
+                    messageBoxLoader.sourceComponent = Qt.createComponent("MessageBox.qml")
+                    messageBoxLoader.item.parentWindow = mainAppWindow
+                    messageBoxLoader.item.text = message
+                    messageBoxLoader.item.open()
+                    messageBoxLoader.item.show()
+                }
+            }
 
             delegate: Rectangle {
                 id: itemDelegate
@@ -66,20 +84,11 @@ ApplicationWindow {
                     }
 
                     onDoubleClicked: {
-                        tableView.model.processFile(row);
+                        tableView.model.processFile(row)
                     }
                 }
             }
         }
-    }
-
-    function displayErrorMessage(message) {
-        Qt.dialogsCritical(message, Qt.resolvedUrl("qrc:/YourMessageBox.qml"))
-    }
-
-    Connections {
-        target: ImageFilesModel
-        onErrorMessage: displayErrorMessage(message)
     }
 }
 

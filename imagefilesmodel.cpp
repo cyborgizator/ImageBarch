@@ -2,6 +2,8 @@
 #include <QtGui/QImage>
 #include <QThread>
 #include <QDir>
+#include <QQmlContext>
+#include <QQmlApplicationEngine>
 
 #include "imagefilesmodel.h"
 #include "barchlib.h"
@@ -129,11 +131,18 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
     static const QList<QImage::Format> supported { QImage::Format_Grayscale8,
                                                    QImage::Format_Indexed8 };
 
-    // TODO: show warning for unsupported format
-    if (sourceImage != nullptr &&
-        !sourceImage->isNull() &&
-        supported.contains(sourceImage->format()))
+    if (sourceImage == nullptr)
     {
+        emit errorMessage("Cannot load image file");
+    }
+    else if (!sourceImage->isNull() &&
+             supported.contains(sourceImage->format()))
+    {
+        if (sourceImage->format() != QImage::Format_Grayscale8)
+        {
+            sourceImage->convertTo(QImage::Format_Grayscale8);
+        }
+
         sourceFile.status = Status::Packing;
         sourceFile.progress = 0;
 
@@ -142,30 +151,75 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
         srcData.height = sourceImage->height();
         srcData.data = sourceImage->bits();
 
-        ImagePacker packer(srcData);
+        ImagePacker packer;
 
         // TODO: create thread and call library function to pack image
-        ImagePacker::Result result = packer.Pack();
+        Result result = packer.pack(srcData);
 
-        if (result == ImagePacker::Result::OK)
+        if (result == Result::OK)
         {
             QDir dir(m_directoryPath);
             QString fileName = sourceFile.info.baseName() + "_packed.barch";
             QString absoluteFilePath = dir.absoluteFilePath(fileName);
-            if (packer.SaveToFile(absoluteFilePath.toStdString()) != ImagePacker::Result::OK)
+
+            if (packer.saveToFile(absoluteFilePath.toStdString()) == Result::OK)
             {
-                // TODO: show error message
+                RefreshModel();
+            }
+            else
+            {
+                emit errorMessage("Invalid image file format");
             }
         }
 
+        sourceFile.status = Status::Normal;
+        delete sourceImage;
+    }
+    else
+    {
+        emit errorMessage("Invalid image file format");
         delete sourceImage;
     }
 }
 
 void ImageFilesModel::UnpackImage(FileItem &sourceFile)
 {
-    // TODO: load and parse source file
+    sourceFile.status = Status::Unpacking;
+    sourceFile.progress = 0;
+
+    QString sourceFileName = sourceFile.info.absoluteFilePath();
+    ImageUnpacker unpacker;
+
     // TODO: create thread and call library function to unpack image
+
+    Result result = unpacker.unpack(sourceFileName.toStdString());
+
+    if (result == Result::OK)
+    {
+        int width = unpacker.width();
+        int height = unpacker.height();
+        QImage image(unpacker.bytes().data(), width, height, QImage::Format_Grayscale8);
+        QDir dir(m_directoryPath);
+        QString dstFileName = sourceFile.info.baseName() + "_unpacked.bmp";
+        QString absoluteFilePath = dir.absoluteFilePath(dstFileName);
+
+        if (image.save(absoluteFilePath, "BMP"))
+        {
+            RefreshModel();
+        }
+        else
+        {
+            emit errorMessage("File saving error");
+        }
+    }
+    else if (result == Result::FileError)
+    {
+        emit errorMessage("File loading error");
+    }
+    else
+    {
+        emit errorMessage("Unpacking error");
+    }
 }
 
 void ImageFilesModel::RefreshModel()
