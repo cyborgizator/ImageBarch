@@ -13,7 +13,6 @@ ImageFilesModel::ImageFilesModel(const QString &dirPath, QObject *parent)
     : QAbstractTableModel(parent)
     , m_directoryPath(dirPath)      // Current working directory by default
 {
-//    RefreshModel();
 }
 
 int ImageFilesModel::rowCount(const QModelIndex &parent) const
@@ -138,11 +137,6 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
     else if (!sourceImage->isNull() &&
              supported.contains(sourceImage->format()))
     {
-        if (sourceImage->format() != QImage::Format_Grayscale8)
-        {
-            sourceImage->convertTo(QImage::Format_Grayscale8);
-        }
-
         sourceFile.status = Status::Packing;
         sourceFile.progress = 0;
 
