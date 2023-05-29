@@ -8,6 +8,18 @@ find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
 
 qt_standard_project_setup()
 
+set(BARCHLIB_HEADERS
+    barchlib.h
+    # Add more header files here
+)
+
+set(BARCHLIB_SOURCES
+    barchlib.cpp
+    # Add more source files here
+)
+
+add_library(BarchLib STATIC ${BARCHLIB_SOURCES} ${BARCHLIB_HEADERS})
+
 set(HEADER_FILES
     imagefilesmodel.h
     # Add more header files here
@@ -19,8 +31,6 @@ set(SOURCE_FILES
     # Add more source files here
 )
 
-include_directories(../Common/barchlib/include)
-
 qt_add_executable(appImageBarch ${CMAKE_PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
 
 qt_add_qml_module(appImageBarch
@@ -28,9 +38,6 @@ qt_add_qml_module(appImageBarch
     VERSION 1.0
     QML_FILES Main.qml MessageBox.qml
 )
-
-add_library(BarchLib STATIC IMPORTED)
-set_target_properties(BarchLib PROPERTIES IMPORTED_LOCATION ../Common/barchlib/bin/BarchLib.lib)
 
 set_target_properties(appImageBarch PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
@@ -41,10 +48,7 @@ set_target_properties(appImageBarch PROPERTIES
 )
 
 target_link_libraries(appImageBarch PRIVATE BarchLib)
-
-target_link_libraries(appImageBarch
-    PRIVATE Qt6::Quick
-)
+target_link_libraries(appImageBarch PRIVATE Qt6::Quick)
 
 install(TARGETS appImageBarch
     BUNDLE DESTINATION .
