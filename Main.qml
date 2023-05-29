@@ -38,6 +38,7 @@ ApplicationWindow {
             alternatingRows: true
             clip: true
             interactive: true
+            keyNavigationEnabled: true
             rowSpacing: 1
             columnSpacing: 1
             model: ImageFilesModel {
