@@ -32,7 +32,7 @@ ApplicationWindow {
         TableView {
             id: tableView
             property var columnWidths: [250, 70, 60, 90]
-            columnWidthProvider: function (column) { return columnWidths[column] }
+            columnWidthProvider: function (column) { return columnWidths[column]; }
             anchors.fill: parent
             anchors.margins: 2
             alternatingRows: true
@@ -50,11 +50,11 @@ ApplicationWindow {
             Connections {
                 target: imageFilesModel
                 function onErrorMessage(message) {
-                    messageBoxLoader.sourceComponent = Qt.createComponent("MessageBox.qml")
-                    messageBoxLoader.item.parentWindow = mainAppWindow
-                    messageBoxLoader.item.text = message
-                    messageBoxLoader.item.open()
-                    messageBoxLoader.item.show()
+                    messageBoxLoader.sourceComponent = Qt.createComponent("MessageBox.qml");
+                    messageBoxLoader.item.parentWindow = mainAppWindow;
+                    messageBoxLoader.item.text = "message";
+                    messageBoxLoader.item.open();
+                    messageBoxLoader.item.visible = true;
                 }
             }
 

@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QtCore/QFileInfo>
 #include <QtQml/QQmlEngine>
+#include <QReadWriteLock>
 
 class ImageFilesModel : public QAbstractTableModel
 {
@@ -55,11 +56,11 @@ private:
 
     struct FileItem
     {
-        FileItem(const QFileInfo& fileInfo) : info(fileInfo) {}
+        FileItem(const QFileInfo& fileInfo);
         QFileInfo info;
         Type type = Type::Unknown;
         Status status = Status::Normal;
-        int progress = 0;
+        QSharedPointer<QReadWriteLock> lock;
     };
 
     void PackImage(FileItem& sourceFile);

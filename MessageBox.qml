@@ -6,8 +6,8 @@ MessageDialog {
     id: messageBox
     title: "Error"
     text: "The document has been modified."
-    flags: Qt.WindowStaysOnTopHint
-    modality: Qt.WindowModal
+    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowStaysOnTopHint
+    modality: Qt.ApplicationModal
     buttons: MessageDialog.Ok
 
     onAccepted: close()

@@ -4,10 +4,14 @@
 #include <QDir>
 #include <QQmlContext>
 #include <QQmlApplicationEngine>
+#include <QtConcurrent/QtConcurrent>
 
 #include "imagefilesmodel.h"
 #include "barchlib.h"
 
+
+// ImageFilesModel methods
+// ----------------------------------------------------------------------------
 
 ImageFilesModel::ImageFilesModel(const QString &dirPath, QObject *parent)
     : QAbstractTableModel(parent)
@@ -27,7 +31,7 @@ QVariant ImageFilesModel::data(const QModelIndex &index, int role) const
 
     if (index.isValid() && index.row() < m_fileItems.count())
     {
-        const FileItem fileItem = m_fileItems[index.row()];
+        const FileItem& fileItem = m_fileItems[index.row()];
 
         if (role == Qt::DisplayRole)
         {
@@ -56,11 +60,11 @@ QVariant ImageFilesModel::data(const QModelIndex &index, int role) const
             case Column::Status:
                 if (fileItem.status == Status::Packing)
                 {
-                    result = QString("Packing: %1%").arg(fileItem.progress);
+                    result = QString("Packing");
                 }
                 else if (fileItem.status == Status::Unpacking)
                 {
-                    result = QString("Unpacking: %1%").arg(fileItem.progress);
+                    result = QString("Unpacking");
                 }
                 break;
             }
@@ -110,15 +114,34 @@ void ImageFilesModel::processFile(int fileIndex)
     if (fileIndex >= 0 && fileIndex < m_fileItems.size())
     {
         FileItem& fileItem = m_fileItems[fileIndex];
-        if (fileItem.status == Status::Normal)
+
+        if (fileItem.lock->tryLockForWrite() && fileItem.status == Status::Normal)
         {
-            if (fileItem.type == Type::BMP || fileItem.type == Type::PNG)
+            QFuture<void> future = QtConcurrent::run([this, fileIndex]() {
+                QModelIndex index = createIndex(fileIndex, static_cast<int>(Column::Status));
+                FileItem& fileItem = m_fileItems[fileIndex];
+                if (fileItem.type == Type::BMP || fileItem.type == Type::PNG)
+                {
+                    fileItem.status = Status::Packing;
+                    emit dataChanged(index, index, { Qt::DisplayRole });
+                    PackImage(fileItem);
+                }
+                else if (fileItem.type == Type::Packed)
+                {
+                    fileItem.status = Status::Unpacking;
+                    emit dataChanged(index, index, { Qt::DisplayRole });
+                    UnpackImage(fileItem);
+                }
+            });
+
+            QFutureWatcher<void>* watcher = new QFutureWatcher<void>(this);
+            if (watcher != nullptr)
             {
-                PackImage(fileItem);
-            }
-            else if (fileItem.type == Type::Packed)
-            {
-                UnpackImage(fileItem);
+                connect(watcher, &QFutureWatcher<void>::finished, [this, fileItem]() {
+                    fileItem.lock->unlock();
+                    RefreshModel();
+                });
+                watcher->setFuture(future);
             }
         }
     }
@@ -137,9 +160,6 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
     else if (!sourceImage->isNull() &&
              supported.contains(sourceImage->format()))
     {
-        sourceFile.status = Status::Packing;
-        sourceFile.progress = 0;
-
         RawImageData srcData;
         srcData.width = sourceImage->width();
         srcData.height = sourceImage->height();
@@ -147,7 +167,6 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
 
         ImagePacker packer;
 
-        // TODO: create thread and call library function to pack image
         Result result = packer.pack(srcData);
 
         if (result == Result::OK)
@@ -156,11 +175,7 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
             QString fileName = sourceFile.info.baseName() + "_packed.barch";
             QString absoluteFilePath = dir.absoluteFilePath(fileName);
 
-            if (packer.saveToFile(absoluteFilePath.toStdString()) == Result::OK)
-            {
-                RefreshModel();
-            }
-            else
+            if (packer.saveToFile(absoluteFilePath.toStdString()) != Result::OK)
             {
                 emit errorMessage("Invalid image file format");
             }
@@ -179,13 +194,8 @@ void ImageFilesModel::PackImage(FileItem &sourceFile)
 void ImageFilesModel::UnpackImage(FileItem &sourceFile)
 {
     sourceFile.status = Status::Unpacking;
-    sourceFile.progress = 0;
-
     QString sourceFileName = sourceFile.info.absoluteFilePath();
     ImageUnpacker unpacker;
-
-    // TODO: create thread and call library function to unpack image
-
     Result result = unpacker.unpack(sourceFileName.toStdString());
 
     if (result == Result::OK)
@@ -197,11 +207,7 @@ void ImageFilesModel::UnpackImage(FileItem &sourceFile)
         QString dstFileName = sourceFile.info.baseName() + "_unpacked.bmp";
         QString absoluteFilePath = dir.absoluteFilePath(dstFileName);
 
-        if (image.save(absoluteFilePath, "BMP"))
-        {
-            RefreshModel();
-        }
-        else
+        if (!image.save(absoluteFilePath, "BMP"))
         {
             emit errorMessage("File saving error");
         }
@@ -228,7 +234,7 @@ void ImageFilesModel::RefreshModel()
 
     for (const QFileInfo &fileInfo : fileInfoList)
     {
-        FileItem fileItem(fileInfo);
+        FileItem& fileItem = m_fileItems.emplaceBack(fileInfo);
         if (fileInfo.suffix().toLower() == "bmp")
         {
             fileItem.type = Type::BMP;
@@ -241,9 +247,16 @@ void ImageFilesModel::RefreshModel()
         {
             fileItem.type = Type::Packed;
         }
-        m_fileItems.append(fileItem);
     }
 
     endResetModel();
 }
 
+// ImageFilesModel::FileItem methods
+// ----------------------------------------------------------------------------
+
+ImageFilesModel::FileItem::FileItem(const QFileInfo &fileInfo)
+     : info(fileInfo)
+{
+    lock = QSharedPointer<QReadWriteLock>::create();
+}
